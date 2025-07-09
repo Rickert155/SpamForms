@@ -1,3 +1,4 @@
 Base/*.csv
 Done/complite.txt
 ProfileChrome/
+**/__pycache__/
