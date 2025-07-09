@@ -43,3 +43,14 @@ def initSpammer():
     if not os.path.exists(done_file_path):
         with open(done_file_path, 'a') as file:
             file.close()
+
+def ReadDoneDomain():
+    list_domain = set()
+    with open(done_file_path, 'r') as file:
+        for domain in file.readlines():
+            list_domain.add(domain.strip())
+    return list_domain
+
+def RecordingDoneDomain(domain:str):
+    with open(done_file_path, 'a+') as file:
+        file.write(f'{domain}\n')

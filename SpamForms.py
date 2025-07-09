@@ -1,10 +1,29 @@
 from SinCity.Browser.driver_chrome import driver_chrome
+from SinCity.colors import RED, RESET, GREEN
 from modules.miniTools import (
         initSpammer,
         ListBase,
-        selectColumn
+        selectColumn,
+        RecordingDoneDomain,
+        ReadDoneDomain
         )
-            
+import csv
+
+def processingBase(base:str, column:str):
+    counter_domain = 0
+    complite_domains = ReadDoneDomain()
+    with open(base, 'r') as file:
+        for row in csv.DictReader(file):
+            domain = row[column]
+            if '://' in domain:domain = domain.split('://')[1]
+            if domain not in complite_domains:
+                counter_domain+=1
+                print(domain)
+                RecordingDoneDomain(domain=domain)
+
+    if counter_domain == 0:
+        print(f"{GREEN}База {base}: Обработаны все домены!{RESET}")
+
 
 def spamForms():
     initSpammer()
@@ -16,5 +35,6 @@ def spamForms():
         print(f'[{number_base}] {base}')
         """Определяем колонку с доменами/сайтами"""
         column_domain = selectColumn(base=base)
+        processingBase(base=base,column=column_domain)
 
 spamForms()
