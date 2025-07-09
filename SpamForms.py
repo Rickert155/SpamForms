@@ -1,4 +1,3 @@
-from SinCity.Browser.driver_chrome import driver_chrome
 from SinCity.colors import RED, RESET, GREEN
 from modules.miniTools import (
         initSpammer,
@@ -7,6 +6,7 @@ from modules.miniTools import (
         RecordingDoneDomain,
         ReadDoneDomain
         )
+from modules.forms import SubmitForms
 import csv
 
 def processingBase(base:str, column:str):
@@ -18,7 +18,11 @@ def processingBase(base:str, column:str):
             if '://' in domain:domain = domain.split('://')[1]
             if domain not in complite_domains:
                 counter_domain+=1
-                print(domain)
+                
+                """Основной функционал инструмента"""
+                SubmitForms(domain=domain)
+                
+                """Записываем домен в док""" 
                 RecordingDoneDomain(domain=domain)
 
     if counter_domain == 0:
