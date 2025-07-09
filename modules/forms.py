@@ -19,15 +19,17 @@ def SearchForms(driver:str):
     list_forms = []
     source_code = SourcePage(driver=driver)
     bs = BeautifulSoup(source_code, 'lxml')
-    
 
     for form in bs.find_all('form'):
         print(form)
 
         list_fields = []
-        number_field = 0
         
+        field_dict = {} 
+        field_form = []
+
         type_fields = ['input', 'textarea']
+        number_field = 0
         for field in form.find_all(type_fields):
             field_string = str(field)
             words = field_string.split()
@@ -36,7 +38,13 @@ def SearchForms(driver:str):
                     if field not in list_fields:
                         number_field+=1
                         list_fields.append(field)
+                        field_dict['type'] = field.get('type')
+                        field_dict['name'] = field.get('name')
                         print(f"[{number_field}] Required field: {field}\n")
+                        field_form.append(field_dict)
+                        
+        print(field_form)
+        list_fields.clear()
 
 
 def SubmitForms(domain:str):
