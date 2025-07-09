@@ -27,7 +27,8 @@ def SearchForms(driver:str):
         list_fields = []
         number_field = 0
         
-        for field in form.find_all('input'):
+        type_fields = ['input', 'textarea']
+        for field in form.find_all(type_fields):
             field_string = str(field)
             words = field_string.split()
             for word in words:
