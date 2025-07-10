@@ -2,7 +2,8 @@ from SinCity.Browser.driver_chrome import driver_chrome
 from SinCity.colors import RED, GREEN, RESET, BLUE
 from bs4 import BeautifulSoup
 from modules.config import contact_pages
-import sys
+from selenium.common.exceptions import WebDriverException
+import sys, time
 
 """Обработка других страниц, если не нашлось формы на основной странице"""
 def OtherPages(driver:str, domain:str):
@@ -55,7 +56,6 @@ def SearchForms(driver:str):
     """
     count_form = 0
     for form in bs.find_all('form'):
-        print(form)
         count_form+=1
 
         fields_info = [] 
@@ -94,44 +94,70 @@ def SearchForms(driver:str):
                         
                         list_fields.append(field)
                         print(
-                                f"[{number_field}] {field}\n"
+                                f"Field [ - {number_field} - ]\n"
                                 f"Type: {type_field}\n"
                                 f"Name: {name_field}\n"
                                 )
     if count_form == 0:
+        print(f"Контактные формы не обнаружены")
         return None
     if count_form != 0 and len(fields_info) != 1:
         return fields_info
     
 
+def divide_line():
+    divide = "-"*60
+    return divide
 
 def SubmitForms(domain:str):
-    print(f'{BLUE}Domain: {domain}{RESET}')
-    driver = driver_chrome()
-    driver.get(f'http://{domain}')
+    driver = None
+    try:
+        print(f'{BLUE}Domain: {domain}{RESET}')
+        driver = driver_chrome()
+        url = f'https://{domain}'
+        driver.get(url) 
     
-    forms = SearchForms(driver=driver)
-    if forms != None:
-        print(forms)
-    if forms == None:
-        print("На странице не обнаружена контактная форма")
-        other_pages = OtherPages(driver=driver, domain=domain)
-        if other_pages != None:
-            number_page = 0
-            for page in other_pages:
-                number_page+=1
-                print(f"[{number_page}] {page}")
-        if other_pages == None:
-            print(f"На сайте не обнаружены страницы контактов!")
+        current_url  = driver.current_url
+        if domain not in current_url:
+            print(f'{RED}Перенаправление {url} на {current_url}{RESET}')
+            driver.quit()
+            return
+
+        forms = SearchForms(driver=driver)
+        """В этом коде не вижу необходимости в целом. Было для отладки"""
+        #if forms != None:
+        #    print(forms)
+        if forms == None:
+            other_pages = OtherPages(driver=driver, domain=domain)
+            if other_pages != None:
+                number_page = 0
+                for page in other_pages:
+                    number_page+=1
+                    print(f"{BLUE}Contact page [{number_page}] {page}{RESET}")
+                    if '://' in page:page = page.split('://')[1]
+                    print(page)
+                    driver.get(f'https://{page}')
+                    check_page = SearchForms(driver=driver)
+            if other_pages == None:
+                print(f"На сайте не обнаружены страницы контактов!")
+            
     
-    driver.quit()
+    except WebDriverException:
+        print(f"{RED}Сайт не существует или недоступен{RESET}")
+    finally:
+        print(divide_line())
+        if driver != None:
+            driver.quit()
 
 if __name__ == '__main__':
-    params = sys.argv
-    if len(params) > 1:
-        domain = params[1]
-        if '://' in domain:domain = domain.split('://')[1]
-        SubmitForms(domain=domain)
-    if len(params) == 1:
-        print("Передай переметр домен!")
-        sys.exit()
+    try:
+        params = sys.argv
+        if len(params) > 1:
+            domain = params[1]
+            if '://' in domain:domain = domain.split('://')[1]
+            SubmitForms(domain=domain)
+        if len(params) == 1:
+            print("Передай переметр домен!")
+            sys.exit()
+    except KeyboardInterrupt:
+        print(f"{RED}\nExit{RESET}")
