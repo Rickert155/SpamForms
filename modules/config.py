@@ -13,5 +13,7 @@ contact_pages = [
             'lets-talk',
             'contacto',
             'connect',
-            'about'
+            'about',
+            'touch',
+            'get-'
             ]
