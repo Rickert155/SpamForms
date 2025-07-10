@@ -5,9 +5,31 @@ from modules.config import contact_pages
 import sys
 
 """Обработка других страниц, если не нашлось формы на основной странице"""
-def OtherPages():
-    for page in contact_pages:
-        print(page)
+def OtherPages(driver:str, domain:str):
+    source_code = SourcePage(driver=driver)
+    bs = BeautifulSoup(source_code, 'lxml')
+    list_link = set()
+    for link in bs.find_all('a'):
+        try:
+            link = link.attrs['href']
+            if link:
+                if domain not in link and '://' not in link:
+                    """На некоторых ссылках могут быть первым символом слэш"""
+                    if link[0] == '/':link = link[1:]
+                    link = f"{domain}{link}"
+                    if 'https://' not in link and 'http://' not in link:
+                        link = f"https://{link}"
+                    for page in contact_pages:
+                        if page in link:
+                            list_link.add(link)
+        except Exception as err:
+            print(f'error: {err}')
+    
+    if len(list_link) != 0:
+        return list_link 
+    if len(list_link) == 0:
+        return None
+
 
 """Получение исходного текста страницы"""
 def SourcePage(driver:str):
@@ -78,8 +100,9 @@ def SearchForms(driver:str):
                                 )
     if count_form == 0:
         return None
-    if count_form != 0:
+    if count_form != 0 and len(fields_info) != 1:
         return fields_info
+    
 
 
 def SubmitForms(domain:str):
@@ -88,7 +111,18 @@ def SubmitForms(domain:str):
     driver.get(f'http://{domain}')
     
     forms = SearchForms(driver=driver)
-    #other_pages = OtherPages()
+    if forms != None:
+        print(forms)
+    if forms == None:
+        print("На странице не обнаружена контактная форма")
+        other_pages = OtherPages(driver=driver, domain=domain)
+        if other_pages != None:
+            number_page = 0
+            for page in other_pages:
+                number_page+=1
+                print(f"[{number_page}] {page}")
+        if other_pages == None:
+            print(f"На сайте не обнаружены страницы контактов!")
     
     driver.quit()
 

@@ -9,6 +9,7 @@ def driver_chrome():
 
     chrome_options = Options()
     chrome_options.add_argument(f"--user-agent={head}")
+    chrome_options.add_argument("--dns-server=8.8.8.8,8.8.4.4")
     chrome_options.add_argument(f'--user-data-dir={profileChrome}')
     chrome_options.add_argument("--disable-blink-features")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
