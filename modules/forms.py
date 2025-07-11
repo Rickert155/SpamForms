@@ -1,8 +1,10 @@
+from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.common.by import By
+
 from SinCity.Browser.driver_chrome import driver_chrome
 from SinCity.colors import RED, GREEN, RESET, BLUE
 from bs4 import BeautifulSoup
 from modules.config import contact_pages
-from selenium.common.exceptions import WebDriverException
 import sys, time
 
 """Обработка других страниц, если не нашлось формы на основной странице"""
@@ -17,14 +19,15 @@ def OtherPages(driver:str, domain:str):
                 if domain not in link and '://' not in link:
                     """На некоторых ссылках могут быть первым символом слэш"""
                     if link[0] == '/':link = link[1:]
-                    link = f"{domain}{link}"
-                    if 'https://' not in link and 'http://' not in link:
-                        link = f"https://{link}"
-                    for page in contact_pages:
-                        if page in link:
-                            list_link.add(link)
+                link = f"{domain}{link}"
+                if 'https://' not in link and 'http://' not in link:
+                    link = f"https://{link}"
+                for page in contact_pages:
+                    if page in link:
+                        list_link.add(link)
         except Exception as err:
-            print(f'error: {err}')
+            pass
+            #print(f'error: {err}')
     
     if len(list_link) != 0:
         return list_link 
@@ -59,7 +62,7 @@ def SearchForms(driver:str):
         count_form+=1
 
         fields_info = [] 
-        
+
         """Список полей, которые насы интересуют"""
         type_fields = ['input', 'textarea']
         number_field = 0
@@ -94,16 +97,37 @@ def SearchForms(driver:str):
                         
                         list_fields.append(field)
                         print(
-                                f"Field [ - {number_field} - ]\n"
+                                f"\t[ - {number_field} - ]\n"
                                 f"Type: {type_field}\n"
                                 f"Name: {name_field}\n"
                                 )
-    if count_form == 0:
-        print(f"Контактные формы не обнаружены")
-        return None
-    if count_form != 0 and len(fields_info) != 1:
-        return fields_info
+        if count_form == 0:
+            print(f"Контактные формы не обнаружены")
+            return None
+        if count_form != 0 and len(fields_info) != 1:
+            return fields_info
     
+
+def Submit(driver:str, fields:[]):
+    count_status = len(fields)
+    for target_form in driver.find_elements(By.TAG_NAME, 'form'):
+        count_check = 0
+        for field in fields:
+            name = field['name']
+            for name_input in target_form.find_elements(By.NAME, name):
+                field_name = name_input.get_attribute('name')
+                if field_name == name:
+                    count_check+=1
+                    break
+        if count_check == count_status:
+            print("Форма подтверждена!")
+            for field in fields:
+                name = field['name']
+                field = driver.find_element(By.NAME, name)
+                field.send_keys('test')
+                time.sleep(1)
+            break
+                    
 
 def divide_line():
     divide = "-"*60
@@ -125,21 +149,42 @@ def SubmitForms(domain:str):
 
         forms = SearchForms(driver=driver)
         """В этом коде не вижу необходимости в целом. Было для отладки"""
-        #if forms != None:
-        #    print(forms)
+        if forms != None:
+            # func submit
+            Submit(driver=driver, fields=forms)
+            """
+            Если же на главной странице есть форма - то заполняем
+            и выходим
+            """
+            return
+
         if forms == None:
+            time.sleep(1)
             other_pages = OtherPages(driver=driver, domain=domain)
             if other_pages != None:
                 number_page = 0
                 for page in other_pages:
                     number_page+=1
-                    print(f"{BLUE}Contact page [{number_page}] {page}{RESET}")
                     if '://' in page:page = page.split('://')[1]
+                    print(f"{BLUE}Contact page [{number_page}] {page}{RESET}")
                     print(page)
                     driver.get(f'https://{page}')
-                    check_page = SearchForms(driver=driver)
+                    check_form = SearchForms(driver=driver)
+                    if check_form != None:
+                        """Тут должна быть функция для отправки формы"""
+                        # func submit 
+                        
+                        """
+                        После заполнения первой же формы можно выйти 
+                        из функции. Если ее заполнить не удалось - то нет смысла
+                        пробовать другие формы(если они есть). Скорее всего на сайте
+                        стоит защита от автоматизации и такую задачу лучше передать 
+                        ассистенту
+                        """
+                        return
             if other_pages == None:
                 print(f"На сайте не обнаружены страницы контактов!")
+                return
             
     
     except WebDriverException:
