@@ -2,7 +2,7 @@ from SinCity.colors import RED, RESET
 from modules.config import content_file_path
 import json, sys
 
-def Content(name:str):
+def Content(name:str, target_company:str):
     name = name.strip().lower()
     content = None
     try:
@@ -19,6 +19,10 @@ def Content(name:str):
         site = data['site']
         subject = data['subject']
         message = data['message']
+        
+        template = "[AGENCY NAME]"
+        subject = subject.replace(template, target_company)
+        message = message.replace(template, target_company)
 
         if 'first' in name:content = first_name
         elif 'last' in name or 'surname' in name:content = last_name
@@ -42,13 +46,10 @@ def Content(name:str):
         print(f"{RED}Отсутствует файл с контентом: {content_file_path}{RESET}")
         sys.exit()
     except Exception as err:
-        if 'no such element: Unable to locate element: {"method":"css selector","selector":"[type="submit"]"}' in str(err):
-            print("Сложная форма, не одностраничная!")
-        else:
-            print(err)
+        print(f"{RED}{err}{RESET}")
 
-def GenerateContent(name:str):
-    content = Content(name=name) 
+def GenerateContent(name:str, company:str):
+    content = Content(name=name, target_company=company) 
     if content != False:
         print(f"Name: {name}\tContent: {content}")
         return content
@@ -60,6 +61,6 @@ if __name__ == '__main__':
     params = sys.argv
     if len(params) > 1:
         name = params[1]
-        GenerateContent(name=name)
+        GenerateContent(name=name, company="Testing Company")
     if len(params) == 1:
         print("Введите параметром имя!")

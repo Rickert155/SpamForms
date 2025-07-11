@@ -1,9 +1,11 @@
 from modules.config import (
         done_dir, 
         done_file_path,
-        base_dir
+        base_dir,
+        result_dir,
+        base_name
         )
-import os, csv, sys
+import os, csv, sys, time
 
 
 """Определяем колонку доменами/сайтами"""
@@ -54,3 +56,28 @@ def ReadDoneDomain():
 def RecordingDoneDomain(domain:str):
     with open(done_file_path, 'a+') as file:
         file.write(f'{domain}\n')
+
+
+def RecordingNotSendedCompany(domain:str, company:str, reason:str):
+    if not os.path.exists(result_dir):os.makedirs(result_dir) 
+    result_file_name = f"{result_dir}/{base_name}{reason}.csv"
+    if not os.path.exists(result_file_name):
+        with open(result_file_name, 'a') as file:
+            write = csv.writer(file)
+            write.writerow(['Domain', 'Company', 'Reason'])
+    
+    with open(result_file_name, 'a+') as file:
+        write = csv.writer(file)
+        write.writerow([domain, company, reason])
+
+def RecordingSuccessSend(domain:str, company:str):
+    file_name = f"{result_dir}/{base_name}_success_send.csv"
+    if not os.path.exists(file_name):
+        with open(file_name, 'a') as file:
+            write = csv.writer(file)
+            write.writerow(['Domain', 'Company', 'Time'])
+
+    current_time = time.strftime("%d/%m/%Y %H:%M:%S")
+    with open(file_name, 'a+') as file:
+        write = csv.writer(file)
+        write.writerow([domain, company, current_time])

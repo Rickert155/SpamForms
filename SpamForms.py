@@ -15,12 +15,13 @@ def processingBase(base:str, column:str):
     with open(base, 'r') as file:
         for row in csv.DictReader(file):
             domain = row[column]
+            company = row['Company']
             if '://' in domain:domain = domain.split('://')[1]
             if domain not in complite_domains:
                 counter_domain+=1
                 
                 """Основной функционал инструмента"""
-                SubmitForms(domain=domain)
+                SubmitForms(domain=domain, company=company)
                 
                 """Записываем домен в док""" 
                 RecordingDoneDomain(domain=domain)

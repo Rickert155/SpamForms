@@ -6,6 +6,7 @@ from SinCity.colors import RED, GREEN, RESET, BLUE
 from bs4 import BeautifulSoup
 from modules.config import contact_pages
 from modules.content import GenerateContent
+from modules.miniTools import RecordingNotSendedCompany, RecordingSuccessSend
 import sys, time
 
 """Обработка других страниц, если не нашлось формы на основной странице"""
@@ -112,7 +113,7 @@ def SearchForms(driver:str):
             return fields_info
     
 
-def Send(driver:str, fields:[]):
+def Send(driver:str, fields:[], company:str, domain:str):
     count_status = len(fields)
     for target_form in driver.find_elements(By.TAG_NAME, 'form'):
         count_check = 0
@@ -129,34 +130,45 @@ def Send(driver:str, fields:[]):
                 for field in fields:
                     name = field['name']
                     field = driver.find_element(By.NAME, name)
-                    content_field = GenerateContent(name=name)
+                    content_field = GenerateContent(name=name, company=company)
                     if content_field == False:
                         """
                         Если контент равен False, в таком случае 
                         это говорит, что поле не определено. Задачу 
                         следует передать ассистенту для ручной обработки
                         """
-                        # func recording
+                        RecordingNotSendedCompany(
+                                domain=domain, 
+                                company=company, 
+                                reason="unknown_field"
+                                )
                         return
                     if content_field != False:
                         field.send_keys(content_field)
                         time.sleep(1)
-                        input('...')
                 
-                    submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
+                submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
                 
-                    #submit.click()
-                    print(f"Форма отправлена!")
+                submit.click()
+                time.sleep(2)
+                print(f"Форма отправлена!")
+                RecordingSuccessSend(domain=domain, company=company)
             except Exception as err:
                 print(f'При отправке формы произошла ошибка: {err}')
             break
+        if count_check != count_status:
+            RecordingNotSendedCompany(
+                domain=domain, 
+                company=company, 
+                reason="unknown_field"
+                )
                     
 
 def divide_line():
     divide = "-"*60
     return divide
 
-def SubmitForms(domain:str):
+def SubmitForms(domain:str, company:str):
     driver = None
     try:
         print(f'{BLUE}Domain: {domain}{RESET}')
@@ -174,7 +186,7 @@ def SubmitForms(domain:str):
         """В этом коде не вижу необходимости в целом. Было для отладки"""
         if forms != None:
             # func submit
-            Send(driver=driver, fields=forms)
+            Send(driver=driver, fields=forms, company=company, domain=domain)
             """
             Если же на главной странице есть форма - то заполняем
             и выходим
@@ -194,7 +206,12 @@ def SubmitForms(domain:str):
                     driver.get(f'https://{page}')
                     check_form = SearchForms(driver=driver)
                     if check_form != None:
-                        Send(driver=driver, fields=check_form)          
+                        Send(
+                                driver=driver, 
+                                fields=check_form, 
+                                company=company, 
+                                domain=domain
+                                )          
                         """
                         После заполнения первой же формы можно выйти 
                         из функции. Если ее заполнить не удалось - то нет смысла
@@ -202,9 +219,19 @@ def SubmitForms(domain:str):
                         стоит защита от автоматизации и такую задачу лучше передать 
                         ассистенту
                         """
+                        RecordingNotSendedCompany(
+                                domain=domain, 
+                                company=company,
+                                reason="unknown_field"
+                                )
                         return
             if other_pages == None:
                 print(f"На сайте не обнаружены страницы контактов!")
+                RecordingNotSendedCompany(
+                        domain=domain, 
+                        company=company, 
+                        reason="not_defined"
+                        )
                 return
             
     
@@ -221,7 +248,7 @@ if __name__ == '__main__':
         if len(params) > 1:
             domain = params[1]
             if '://' in domain:domain = domain.split('://')[1]
-            SubmitForms(domain=domain)
+            SubmitForms(domain=domain, company='Rickert Company')
         if len(params) == 1:
             print("Передай переметрoм домен!")
             sys.exit()

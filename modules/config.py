@@ -6,6 +6,7 @@ done_file_path = f"{done_dir}/{complite_file}"
 """Директория для хранения баз с сайтам/доменами для обхода"""
 base_dir = "Base"
 
+result_dir = "Result"
 
 """Вариации страниц контактов"""
 contact_pages = [
@@ -24,3 +25,6 @@ contact_pages = [
 content_dir = 'Data'
 content_file = "content_awwwards.json"
 content_file_path = f"{content_dir}/{content_file}"
+
+"""Имя базы, которую отправляем"""
+base_name = "Awwwards"
