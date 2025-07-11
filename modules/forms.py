@@ -101,11 +101,13 @@ def SearchForms(driver:str):
                         fields_info.append(info)
                         
                         list_fields.append(field)
+                        """
                         print(
                                 f"\t[ - {number_field} - ]\n"
                                 f"Type: {type_field}\n"
                                 f"Name: {name_field}\n"
                                 )
+                        """
         if count_form == 0 or count_textarea == 0:
             print(f"Контактные формы не обнаружены")
             return None
@@ -154,7 +156,10 @@ def Send(driver:str, fields:[], company:str, domain:str):
                 print(f"Форма отправлена!")
                 RecordingSuccessSend(domain=domain, company=company)
             except Exception as err:
-                print(f'При отправке формы произошла ошибка: {err}')
+                print(
+                        f'{RED}При отправке формы произошла ошибка{RESET}\n'
+                        f'{RED}Сайт следует проверить вручную!{RESET}'
+                        )
             break
         if count_check != count_status:
             RecordingNotSendedCompany(

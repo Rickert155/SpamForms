@@ -71,6 +71,7 @@ def RecordingNotSendedCompany(domain:str, company:str, reason:str):
         write.writerow([domain, company, reason])
 
 def RecordingSuccessSend(domain:str, company:str):
+    if not os.path.exists(result_dir):os.makedirs(result_dir) 
     file_name = f"{result_dir}/{base_name}_success_send.csv"
     if not os.path.exists(file_name):
         with open(file_name, 'a') as file:
