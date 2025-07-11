@@ -5,6 +5,7 @@ from SinCity.Browser.driver_chrome import driver_chrome
 from SinCity.colors import RED, GREEN, RESET, BLUE
 from bs4 import BeautifulSoup
 from modules.config import contact_pages
+from modules.content import GenerateContent
 import sys, time
 
 """Обработка других страниц, если не нашлось формы на основной странице"""
@@ -108,7 +109,7 @@ def SearchForms(driver:str):
             return fields_info
     
 
-def Submit(driver:str, fields:[]):
+def Send(driver:str, fields:[]):
     count_status = len(fields)
     for target_form in driver.find_elements(By.TAG_NAME, 'form'):
         count_check = 0
@@ -121,11 +122,20 @@ def Submit(driver:str, fields:[]):
                     break
         if count_check == count_status:
             print("Форма подтверждена!")
-            for field in fields:
-                name = field['name']
-                field = driver.find_element(By.NAME, name)
-                field.send_keys('test')
-                time.sleep(1)
+            try:
+                for field in fields:
+                    name = field['name']
+                    field = driver.find_element(By.NAME, name)
+                    content_field = GenerateContent(name=name)
+                    field.send_keys('test')
+                    time.sleep(1)
+                
+                submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
+                
+                #submit.click()
+                print(f"Форма отправлена!")
+            except Exception as err:
+                print(f'При отправке формы произошла ошибка: {err}')
             break
                     
 
@@ -151,7 +161,7 @@ def SubmitForms(domain:str):
         """В этом коде не вижу необходимости в целом. Было для отладки"""
         if forms != None:
             # func submit
-            Submit(driver=driver, fields=forms)
+            Send(driver=driver, fields=forms)
             """
             Если же на главной странице есть форма - то заполняем
             и выходим
@@ -173,7 +183,7 @@ def SubmitForms(domain:str):
                     if check_form != None:
                         """Тут должна быть функция для отправки формы"""
                         # func submit 
-                        
+                        Send(driver=driver, fieds=check_form)          
                         """
                         После заполнения первой же формы можно выйти 
                         из функции. Если ее заполнить не удалось - то нет смысла

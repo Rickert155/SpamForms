@@ -1,5 +1,5 @@
 Base/*.csv
 Done/complite.txt
+Data/*.json
 ProfileChrome/
 **/__pycache__/
-*.json
