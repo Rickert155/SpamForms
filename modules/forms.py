@@ -20,7 +20,7 @@ def OtherPages(driver:str, domain:str):
                 if domain not in link and '://' not in link:
                     """На некоторых ссылках могут быть первым символом слэш"""
                     if link[0] == '/':link = link[1:]
-                link = f"{domain}{link}"
+                link = f"{domain}/{link}"
                 if 'https://' not in link and 'http://' not in link:
                     link = f"https://{link}"
                 for page in contact_pages:
@@ -61,6 +61,7 @@ def SearchForms(driver:str):
     count_form = 0
     for form in bs.find_all('form'):
         count_form+=1
+        count_textarea = 0
 
         fields_info = [] 
 
@@ -75,6 +76,8 @@ def SearchForms(driver:str):
             """Перебираем текст, ещем обязательные поля/textarea"""
             for word in words:
                 if 'required' in word or 'textarea' in word:
+                    if 'textarea' in word:
+                        count_textarea+=1
                     if field not in list_fields:
                         """Получаем значения атрибутов, которые нас интересуют"""
                         type_field = field.get('type')
@@ -102,7 +105,7 @@ def SearchForms(driver:str):
                                 f"Type: {type_field}\n"
                                 f"Name: {name_field}\n"
                                 )
-        if count_form == 0:
+        if count_form == 0 or count_textarea == 0:
             print(f"Контактные формы не обнаружены")
             return None
         if count_form != 0 and len(fields_info) != 1:
@@ -127,13 +130,23 @@ def Send(driver:str, fields:[]):
                     name = field['name']
                     field = driver.find_element(By.NAME, name)
                     content_field = GenerateContent(name=name)
-                    field.send_keys('test')
-                    time.sleep(1)
+                    if content_field == False:
+                        """
+                        Если контент равен False, в таком случае 
+                        это говорит, что поле не определено. Задачу 
+                        следует передать ассистенту для ручной обработки
+                        """
+                        # func recording
+                        return
+                    if content_field != False:
+                        field.send_keys(content_field)
+                        time.sleep(1)
+                        input('...')
                 
-                submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
+                    submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
                 
-                #submit.click()
-                print(f"Форма отправлена!")
+                    #submit.click()
+                    print(f"Форма отправлена!")
             except Exception as err:
                 print(f'При отправке формы произошла ошибка: {err}')
             break
@@ -181,9 +194,7 @@ def SubmitForms(domain:str):
                     driver.get(f'https://{page}')
                     check_form = SearchForms(driver=driver)
                     if check_form != None:
-                        """Тут должна быть функция для отправки формы"""
-                        # func submit 
-                        Send(driver=driver, fieds=check_form)          
+                        Send(driver=driver, fields=check_form)          
                         """
                         После заполнения первой же формы можно выйти 
                         из функции. Если ее заполнить не удалось - то нет смысла
@@ -212,7 +223,7 @@ if __name__ == '__main__':
             if '://' in domain:domain = domain.split('://')[1]
             SubmitForms(domain=domain)
         if len(params) == 1:
-            print("Передай переметр домен!")
+            print("Передай переметрoм домен!")
             sys.exit()
     except KeyboardInterrupt:
         print(f"{RED}\nExit{RESET}")
