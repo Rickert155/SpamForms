@@ -25,16 +25,29 @@ def Content(name:str, target_company:str):
         message = message.replace(template, target_company)
 
         if 'first' in name:content = first_name
+        
         elif 'last' in name or 'surname' in name:content = last_name
+        
         elif 'full' in name:content = full_name
+        
         elif 'email' in name or 'mail' in name:content = email
+        
         elif 'phone' in name:content = phone
+        
         elif 'company' in name:content = company
+        
         elif 'project' in name:content = your_project
+        
         elif 'site' in name or 'url' in name:content = site
+        
         elif 'subj' in name or 'theme' in name:content = subject
+
         elif 'message' in name:content = message
         elif 'body' in name:content = message
+        elif 'help' in name:content = message
+        elif 'comment' in name:content = message
+        elif 'nachricht' in name:content = message
+        
         elif 'name' in name:content = user_name
 
         else:

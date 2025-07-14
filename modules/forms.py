@@ -6,7 +6,11 @@ from SinCity.colors import RED, GREEN, RESET, BLUE
 from bs4 import BeautifulSoup
 from modules.config import contact_pages
 from modules.content import GenerateContent
-from modules.miniTools import RecordingNotSendedCompany, RecordingSuccessSend
+from modules.miniTools import (
+        RecordingNotSendedCompany, 
+        RecordingSuccessSend,
+        RecordingDoneDomain
+        )
 import sys, time
 
 """Обработка других страниц, если не нашлось формы на основной странице"""
@@ -25,7 +29,7 @@ def OtherPages(driver:str, domain:str):
                 if 'https://' not in link and 'http://' not in link:
                     link = f"https://{link}"
                 for page in contact_pages:
-                    if page in link:
+                    if page in link and '#' not in page:
                         list_link.add(link)
         except Exception as err:
             pass
@@ -119,6 +123,7 @@ def Send(driver:str, fields:[], company:str, domain:str):
     count_status = len(fields)
     for target_form in driver.find_elements(By.TAG_NAME, 'form'):
         count_check = 0
+        print(fields)
         for field in fields:
             name = field['name']
             for name_input in target_form.find_elements(By.NAME, name):
@@ -131,6 +136,13 @@ def Send(driver:str, fields:[], company:str, domain:str):
             try:
                 for field in fields:
                     name = field['name']
+                    if 'recaptcha' in name:
+                        RecordingNotSendedCompany(
+                                domain=domain,
+                                company=company,
+                                reason="recaptcha"
+                                )
+                        return 
                     field = driver.find_element(By.NAME, name)
                     content_field = GenerateContent(name=name, company=company)
                     if content_field == False:
@@ -151,16 +163,22 @@ def Send(driver:str, fields:[], company:str, domain:str):
                 
                 submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
                 
-                submit.click()
-                time.sleep(2)
-                print(f"Форма отправлена!")
+                #submit.click()
+                #time.sleep(2)
+                input('test...')
+                print(f"{GREEN}Форма отправлена!{RESET}")
                 RecordingSuccessSend(domain=domain, company=company)
             except Exception as err:
                 print(
                         f'{RED}При отправке формы произошла ошибка{RESET}\n'
-                        f'{RED}Сайт следует проверить вручную!{RESET}'
+                        f'{RED}Сайт следует проверить вручную!{RESET}\n'
+                        f'{err}'
                         )
+            finally:
+                RecordingDoneDomain(domain=domain)
+
             break
+
         if count_check != count_status:
             RecordingNotSendedCompany(
                 domain=domain, 
@@ -198,6 +216,7 @@ def SubmitForms(domain:str, company:str):
             """
             return
 
+        count_sended = 0
         if forms == None:
             time.sleep(1)
             other_pages = OtherPages(driver=driver, domain=domain)
@@ -209,14 +228,17 @@ def SubmitForms(domain:str, company:str):
                     print(f"{BLUE}Contact page [{number_page}] {page}{RESET}")
                     print(page)
                     driver.get(f'https://{page}')
+                    time.sleep(2)
                     check_form = SearchForms(driver=driver)
                     if check_form != None:
+                        count_sended+=1
                         Send(
                                 driver=driver, 
                                 fields=check_form, 
                                 company=company, 
                                 domain=domain
                                 )          
+                        count_sended+=1
                         """
                         После заполнения первой же формы можно выйти 
                         из функции. Если ее заполнить не удалось - то нет смысла
@@ -224,21 +246,24 @@ def SubmitForms(domain:str, company:str):
                         стоит защита от автоматизации и такую задачу лучше передать 
                         ассистенту
                         """
-                        RecordingNotSendedCompany(
-                                domain=domain, 
-                                company=company,
-                                reason="unknown_field"
-                                )
                         return
             if other_pages == None:
-                print(f"На сайте не обнаружены страницы контактов!")
+                print(f"{RED}На сайте не обнаружены страницы контактов!{RESET}")
                 RecordingNotSendedCompany(
                         domain=domain, 
                         company=company, 
                         reason="not_defined"
                         )
                 return
-            
+            elif count_sended == 0 and other_pages != None:
+                print(f"{RED}Отправка формы не удалась!{RESET}")
+                RecordingNotSendedCompany(
+                        domain=domain, 
+                        company=company, 
+                        reason="not_defined"
+                        )
+                return
+
     
     except WebDriverException:
         print(f"{RED}Сайт не существует или недоступен{RESET}")
