@@ -79,7 +79,7 @@ def SubmitForms(domain:str, company:str):
 
         all_forms = SearchForms(driver=driver)
         if len(all_forms) != 0:
-            processingForms(forms=all_forms, driver=driver)
+            processingForms(forms=all_forms, driver=driver, company=company)
         if len(all_forms) == 0:
             print(f'{RED}Формы на {url} не обнаружены!{RESET}')
             other_pages = OtherPages(driver=driver, domain=domain)
@@ -94,7 +94,8 @@ def SubmitForms(domain:str, company:str):
                     time.sleep(2)
                     other_forms = SearchForms(driver=driver)
                     if len(other_forms) > 0:
-                        processingForms(forms=other_forms, driver=driver)
+                        processingForms(forms=other_forms, driver=driver, company=company)
+                        
             if len(other_pages) == 0:
                 print(f"{RED}Страниц контактов не обнаружены!{RESET}")
 
@@ -125,17 +126,10 @@ def SearchForms(driver:str):
         count_textarea = 0
 
         for field in form.find_all(list_type_field):
-            
             text_field = str(field)
             
             field_info = {}
             
-            if 'textarea' in text_field:
-                field_info['tag'] = 'textarea'
-                count_textarea+=1
-                field_info['name'] = 'text'
-                field_info['type'] = 'text'
-                field_info['placeholder'] = None
             if 'input' in text_field and 'hidden' not in text_field:
                 field_info['tag'] = 'input'
 
@@ -144,6 +138,13 @@ def SearchForms(driver:str):
 
                 field_info['name'] = name
                 field_info['type'] = type_field
+                field_info['placeholder'] = None
+
+            if 'textarea' in text_field:
+                field_info['tag'] = 'textarea'
+                count_textarea+=1
+                field_info['name'] = 'text'
+                field_info['type'] = 'text'
                 field_info['placeholder'] = None
 
             try:
@@ -168,37 +169,74 @@ def SearchForms(driver:str):
 ###########################################################
 #               Обработка формы                           #
 ###########################################################
-def processingForms(forms:list[list[dict]], driver:str):
+def processingForms(forms:list[list[dict]], driver:str, company:str):
     """Получаем список форм с полями для обработки"""
     for form in forms:
-        number_field = 0
-        for field in form:
-            number_field+=1
-            
-            tag = field['tag']
-            name = field['name']
-            type_field = field['type']
-            placeholder = field['placeholder']
-            print(
-                    f'Tag: {tag}\n'
-                    f'Name: {name}\n'
-                    f'Type: {type_field}\n'
-                    f'Placeholder: {placeholder}\n'
-                    )
-            full_text = f"{tag} {name} {type_field} {placeholder}"
-            ConfirmForm(
-                    driver=driver, 
-                    tag=tag, 
-                    name=name, 
-                    type_field=type_field,
-                    full_text=full_text
-                    )
+        success = ConfirmForm(driver=driver, form=form, company=company)
+        if success == True:
+            print(f"{GREEN}Форма успешно отправлена!{RESET}")
+            return
+        if success == False:
+            print(f"{RED}Форма не отправлена!{RESET}")
 
 ###########################################################
 #               Подтверждение и отправка формы            #
 ###########################################################
-def ConfirmForm(driver:str, tag:str, name:str, type_field:str, full_text:str):
-    pass
+def ConfirmForm(driver:str, form:[], company:str):
+    all_forms = driver.find_elements(By.TAG_NAME, 'form')
+
+    for target_form in all_forms:
+        
+        for field in form:
+            tag = field['tag']
+            name = field['name']
+            type_field = field['type']
+            placeholder = field['placeholder']
+
+            full_attrs = f"{tag} {name} {type_field} {placeholder}"
+            content = GenerateContent(full_attrs=full_attrs, company=company)
+             
+            if content != False: 
+                try:
+                    if tag == 'textarea':
+                        letter = target_form.find_element(
+                                By.TAG_NAME, 'textarea'
+                                )
+                        letter.send_keys(content)
+                    
+                    elif name != None:
+                        target_name = target_form.find_element(
+                                By.NAME, name
+                                )
+                        target_name.send_keys(content)
+
+                    elif placeholder != None: 
+                        target_placeholder = target_form.find_element(
+                                By.CSS_SELECTOR, f'[placeholder="{placeholder}"]'
+                                )
+                        target_placeholder.send_keys(content)
+
+                    elif 'textarea' in full_attrs:
+                        print('textarea содержится')
+                        letter = target_form.find_element(By.CSS_SELECTOR, 'textarea')
+                        letter.send_keys(content)
+
+                
+                    else:
+                        print(f'{RED}Форму необходимо проверить вручную!{RESET}')
+                        return False
+                
+
+                    input('...')
+
+                except Exception as err:
+                    print(err)
+                
+            
+
+
+        
+        
 
 ###########################################################
 #               Для отладочных запусков                   #

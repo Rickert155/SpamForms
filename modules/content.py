@@ -2,8 +2,8 @@ from SinCity.colors import RED, RESET
 from modules.config import content_file_path
 import json, sys
 
-def Content(name:str, target_company:str, tag:str):
-    name = name.strip().lower()
+def Content(full_attrs:str, target_company:str):
+    full_attrs = full_attrs.strip().lower()
     content = None
     try:
         with open(content_file_path, 'r') as file:
@@ -24,36 +24,34 @@ def Content(name:str, target_company:str, tag:str):
         subject = subject.replace(template, target_company)
         message = message.replace(template, target_company)
 
-        if 'first' in name:content = first_name
+        if 'first' in full_attrs:content = first_name
         
-        elif 'last' in name or 'surname' in name:content = last_name
+        elif 'last' in full_attrs or 'surname' in full_attrs:content = last_name
         
-        elif 'full' in name:content = full_name
+        elif 'full' in full_attrs:content = full_name
         
-        elif 'email' in name or 'mail' in name:content = email
+        elif 'email' in full_attrs or 'mail' in full_attrs:content = email
         
-        elif 'phone' in name:content = phone
-        elif 'tele' in name:content = phone
+        elif 'phone' in full_attrs:content = phone
+        elif 'tele' in full_attrs:content = phone
         
-        elif 'company' in name:content = company
+        elif 'company' in full_attrs:content = company
         
-        elif 'project' in name:content = your_project
+        elif 'project' in full_attrs:content = your_project
         
-        elif 'site' in name or 'url' in name:content = site
+        elif 'site' in full_attrs or 'url' in full_attrs:content = site
         
-        elif 'subj' in name or 'theme' in name:content = subject
+        elif 'subj' in full_attrs or 'theme' in full_attrs:content = subject
 
-        elif 'message' in name:content = message
-        elif 'body' in name:content = message
-        elif 'help' in name:content = message
-        elif 'comment' in name:content = message
-        elif 'nachricht' in name:content = message
-        elif 'quest' in name:content = message
-        elif 'textarea' in tag:content = message
+        elif 'message' in full_attrs:content = message
+        elif 'body' in full_attrs:content = message
+        elif 'help' in full_attrs:content = message
+        elif 'comment' in full_attrs:content = message
+        elif 'nachricht' in full_attrs:content = message
+        elif 'quest' in full_attrs:content = message
         
-        elif 'name' in name:content = user_name
+        elif 'name' in full_attrs:content = user_name
         
-
         else:
             return False
 
@@ -65,10 +63,9 @@ def Content(name:str, target_company:str, tag:str):
     except Exception as err:
         print(f"{RED}{err}{RESET}")
 
-def GenerateContent(name:str, company:str, tag:str):
-    content = Content(name=name, target_company=company, tag=tag) 
+def GenerateContent(full_attrs:str, company:str):
+    content = Content(target_company=company, full_attrs=full_attrs) 
     if content != False:
-        print(f"Name: {name}\tContent: {content}")
         return content
     if content == False:
         return False
@@ -78,6 +75,6 @@ if __name__ == '__main__':
     params = sys.argv
     if len(params) > 1:
         name = params[1]
-        GenerateContent(name=name, company="Testing Company")
+        GenerateContent(company='Rickert Tester', full_attrs="input Message")
     if len(params) == 1:
         print("Введите параметром имя!")
