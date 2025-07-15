@@ -81,8 +81,8 @@ def RecordingNotSendedCompany(domain:str, company:str, reason:str):
     list_domain = []
     with open(result_file_name, 'r') as file:
         for row in csv.DictReader(file):
-            domain = row['Domain']
-            list_domain.append(domain)
+            domain_complite = row['Domain']
+            list_domain.append(domain_complite)
     
     current_time = CurrentTime()
     

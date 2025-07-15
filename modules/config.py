@@ -18,7 +18,9 @@ contact_pages = [
             'connect',
             'about',
             'touch',
-            'get-'
+            'get-',
+            'start',
+            'kontakt'
             ]
 
 """Директория для вводных данных"""

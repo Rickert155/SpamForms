@@ -20,6 +20,7 @@ def processingBase(base:str, column:str):
             if domain not in complite_domains:
                 counter_domain+=1
                 
+                print(f'{GREEN}[{counter_domain}] {domain}{RESET}')
                 """Основной функционал инструмента"""
                 SubmitForms(domain=domain, company=company)
                 
@@ -31,15 +32,18 @@ def processingBase(base:str, column:str):
 
 
 def spamForms():
-    initSpammer()
+    try:
+        initSpammer()
 
-    list_base = ListBase()
-    number_base=0
-    for base in list_base:
-        number_base+=1
-        print(f'[{number_base}] {base}')
-        """Определяем колонку с доменами/сайтами"""
-        column_domain = selectColumn(base=base)
-        processingBase(base=base,column=column_domain)
+        list_base = ListBase()
+        number_base=0
+        for base in list_base:
+            number_base+=1
+            print(f'[{number_base}] {base}')
+            """Определяем колонку с доменами/сайтами"""
+            column_domain = selectColumn(base=base)
+            processingBase(base=base,column=column_domain)
+    except KeyboardInterrupt:
+        print(f"{RED}\nExit...{RESET}")
 
 spamForms()

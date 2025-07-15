@@ -1,7 +1,10 @@
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 
+from urllib3.exceptions import ReadTimeoutError
+
 from SinCity.Browser.driver_chrome import driver_chrome
+from SinCity.Browser.scrolling import Scrolling
 from SinCity.colors import RED, GREEN, RESET, BLUE
 from bs4 import BeautifulSoup
 from modules.config import contact_pages
@@ -66,7 +69,11 @@ def SearchForms(driver:str):
     count_form = 0
     for form in bs.find_all('form'):
         count_form+=1
+        
+        text_message = 0
         count_textarea = 0
+        recaptcha_count = 0 
+        only_textarea_and_required  = 0
 
         fields_info = [] 
 
@@ -83,6 +90,18 @@ def SearchForms(driver:str):
                 if 'required' in word or 'textarea' in word:
                     if 'textarea' in word:
                         count_textarea+=1
+                    if 'textarea' in word or 'required' in word:
+                        only_textarea_and_required+=1
+                    if 'message' in word.lower():
+                        text_message+=1
+                    if 'recaptcha' in word:
+                        recaptcha_count+=1
+                        RecordingNotSendedCompany(
+                                domain=domain, 
+                                company=company, 
+                                reason='recaptcha'
+                                )
+                        return 
                     if field not in list_fields:
                         """Получаем значения атрибутов, которые нас интересуют"""
                         type_field = field.get('type')
@@ -100,22 +119,28 @@ def SearchForms(driver:str):
                         info = {
                                 "field_number":number_field,
                                 "type":type_field,
-                                "name":name_field
+                                "name":name_field,
+                                "tag":field
                                 }
                         fields_info.append(info)
                         
                         list_fields.append(field)
-                        """
                         print(
                                 f"\t[ - {number_field} - ]\n"
                                 f"Type: {type_field}\n"
                                 f"Name: {name_field}\n"
                                 )
-                        """
+                        break
+        if recaptcha_count > 0:
+            return
         if count_form == 0 or count_textarea == 0:
             print(f"Контактные формы не обнаружены")
             return None
         if count_form != 0 and len(fields_info) != 1:
+            return fields_info
+        if only_textarea_and_required >= 2:
+            return fields_info
+        if text_message != 0:
             return fields_info
     
 
@@ -123,9 +148,10 @@ def Send(driver:str, fields:[], company:str, domain:str):
     count_status = len(fields)
     for target_form in driver.find_elements(By.TAG_NAME, 'form'):
         count_check = 0
-        print(fields)
+        #print(fields)
         for field in fields:
             name = field['name']
+            tag = field['tag']
             for name_input in target_form.find_elements(By.NAME, name):
                 field_name = name_input.get_attribute('name')
                 if field_name == name:
@@ -136,6 +162,7 @@ def Send(driver:str, fields:[], company:str, domain:str):
             try:
                 for field in fields:
                     name = field['name']
+                    type_field = field['type']
                     if 'recaptcha' in name:
                         RecordingNotSendedCompany(
                                 domain=domain,
@@ -144,7 +171,20 @@ def Send(driver:str, fields:[], company:str, domain:str):
                                 )
                         return 
                     field = driver.find_element(By.NAME, name)
-                    content_field = GenerateContent(name=name, company=company)
+                    if 'checkbox' not in type_field:
+                        content_field = GenerateContent(name=name, company=company, tag=tag)
+                    if 'checkbox' in type_field:
+                        try:
+                            field.click()
+                            continue
+                        except:
+                            print(f"{RED}Не удалось прожать чек-бокс!{RESET}")
+                            RecordingNotSendedCompany(
+                                    domain=domain, 
+                                    company=company, 
+                                    reason="unknown_field"
+                                    )
+                        return
                     if content_field == False:
                         """
                         Если контент равен False, в таком случае 
@@ -164,8 +204,7 @@ def Send(driver:str, fields:[], company:str, domain:str):
                 submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
                 
                 #submit.click()
-                #time.sleep(2)
-                input('test...')
+                time.sleep(2)
                 print(f"{GREEN}Форма отправлена!{RESET}")
                 RecordingSuccessSend(domain=domain, company=company)
             except Exception as err:
@@ -198,8 +237,8 @@ def SubmitForms(domain:str, company:str):
         driver = driver_chrome()
         url = f'https://{domain}'
         driver.get(url) 
-    
         current_url  = driver.current_url
+        Scrolling(driver=driver) 
         if domain not in current_url:
             print(f'{RED}Перенаправление {url} на {current_url}{RESET}')
             driver.quit()
@@ -208,7 +247,6 @@ def SubmitForms(domain:str, company:str):
         forms = SearchForms(driver=driver)
         """В этом коде не вижу необходимости в целом. Было для отладки"""
         if forms != None:
-            # func submit
             Send(driver=driver, fields=forms, company=company, domain=domain)
             """
             Если же на главной странице есть форма - то заполняем
@@ -228,7 +266,8 @@ def SubmitForms(domain:str, company:str):
                     print(f"{BLUE}Contact page [{number_page}] {page}{RESET}")
                     print(page)
                     driver.get(f'https://{page}')
-                    time.sleep(2)
+                    Scrolling(driver=driver)
+                    time.sleep(5)
                     check_form = SearchForms(driver=driver)
                     if check_form != None:
                         count_sended+=1
@@ -267,10 +306,18 @@ def SubmitForms(domain:str, company:str):
     
     except WebDriverException:
         print(f"{RED}Сайт не существует или недоступен{RESET}")
+    except ReadTimeoutError:
+        print(f"{RED}Слишком долгая загрузка страницы!{RESET}")
+        if driver != None:
+            driver.quit()
+            sys.exit()
+            return
+
     finally:
         print(divide_line())
         if driver != None:
             driver.quit()
+            return
 
 if __name__ == '__main__':
     try:

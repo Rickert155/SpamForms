@@ -2,7 +2,7 @@ from SinCity.colors import RED, RESET
 from modules.config import content_file_path
 import json, sys
 
-def Content(name:str, target_company:str):
+def Content(name:str, target_company:str, tag:str):
     name = name.strip().lower()
     content = None
     try:
@@ -33,6 +33,7 @@ def Content(name:str, target_company:str):
         elif 'email' in name or 'mail' in name:content = email
         
         elif 'phone' in name:content = phone
+        elif 'tele' in name:content = phone
         
         elif 'company' in name:content = company
         
@@ -47,8 +48,11 @@ def Content(name:str, target_company:str):
         elif 'help' in name:content = message
         elif 'comment' in name:content = message
         elif 'nachricht' in name:content = message
+        elif 'quest' in name:content = message
+        elif 'textarea' in tag:content = message
         
         elif 'name' in name:content = user_name
+        
 
         else:
             return False
@@ -61,8 +65,8 @@ def Content(name:str, target_company:str):
     except Exception as err:
         print(f"{RED}{err}{RESET}")
 
-def GenerateContent(name:str, company:str):
-    content = Content(name=name, target_company=company) 
+def GenerateContent(name:str, company:str, tag:str):
+    content = Content(name=name, target_company=company, tag=tag) 
     if content != False:
         print(f"Name: {name}\tContent: {content}")
         return content
