@@ -27,6 +27,7 @@ def Content(full_attrs:str, target_company:str):
         if 'first' in full_attrs:content = first_name
         
         elif 'last' in full_attrs or 'surname' in full_attrs:content = last_name
+        elif 'lnam' in full_attrs:content = last_name
         
         elif 'full' in full_attrs:content = full_name
         

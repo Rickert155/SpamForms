@@ -238,7 +238,7 @@ def processingForms(forms:list[list[dict]], driver:str, company:str, domain:str)
     for form in forms:
         if len(form) < 3:
             continue
-        success = ConfirmForm(driver=driver, form=form, company=company)
+        success = ConfirmForm(driver=driver, form=form, company=company, domain=domain)
         if success == True:
             print(f"{GREEN}Форма успешно отправлена!{RESET}")
             return True
@@ -250,7 +250,7 @@ def processingForms(forms:list[list[dict]], driver:str, company:str, domain:str)
 ###########################################################
 #               Подтверждение и отправка формы            #
 ###########################################################
-def ConfirmForm(driver:str, form:[], company:str):
+def ConfirmForm(driver:str, form:[], company:str, domain:str):
     all_forms = driver.find_elements(By.TAG_NAME, 'form')
     
     for target_form in all_forms:
@@ -292,35 +292,34 @@ def ConfirmForm(driver:str, form:[], company:str):
                     reason="recaptcha"
                     )
                 return False
-            if 'email' in type_field:
-                full_attrs = 'email'
-            if 'date' in type_field:
-                all_fields_input-=1
-                continue
-            if 'file' in type_field:
-                all_fields_input-=1
-                continue
+
+            if type_field != None:
+                if 'email' in type_field:
+                    full_attrs = 'email'
+                if 'date' in type_field:
+                    all_fields_input-=1
+                    continue
+                if 'file' in type_field:
+                    all_fields_input-=1
+                    continue
             content = GenerateContent(full_attrs=full_attrs, company=company)
 
-            print(full_attrs)
-            content_list = []
+            list_content = []
             list_class = []
             
-            if content != False and content not in content_list:
-                content_list.append(content)
+            if content != False and content not in list_content:
+                list_content.append(content)
                 time.sleep(1)
                 try:
                     if 'textarea' in full_attrs:
                         print(f'Обнаружено поле для ввода письма:')
                         content = GenerateContent(full_attrs="textarea", company=company)
-                        print(content)
                         letter = target_form.find_element(By.TAG_NAME, 'textarea')
                         letter.send_keys(content)
                         matched_field+=1
                         continue
 
                     if len(id_field) > 1:
-                        print(id_field)
                         element = target_form.find_element(By.ID, id_field)
                         element.send_keys(content)
                         matched_field+=1
@@ -363,7 +362,6 @@ def ConfirmForm(driver:str, form:[], company:str):
                     elif len(class_name) >= 1:
                         if class_name not in list_class:
                             list_class.append(class_name)
-                            print(class_name)
                             class_element = target_form.find_element(By.CLASS_NAME, class_name)
                             class_element.send_keys(content)
                             matched_field+=1

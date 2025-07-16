@@ -10,7 +10,7 @@ def driver_chrome():
     chrome_options = Options()
     #chrome_options.add_argument(f'--user-data-dir={profileChrome}')
     chrome_options.add_argument(f"--user-agent={head}")
-    #chrome_options.add_argument(f"--headless")
+    chrome_options.add_argument(f"--headless")
 
     chrome_options.add_argument(f"--incognito")
     chrome_options.add_argument("--dns-server=8.8.8.8")
