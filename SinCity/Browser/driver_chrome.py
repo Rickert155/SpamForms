@@ -15,6 +15,7 @@ def driver_chrome():
     chrome_options.add_argument(f"--incognito")
     chrome_options.add_argument("--dns-server=8.8.8.8")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
+    chrome_options.add_argument("--lang=en-US")
 
     chrome_options.add_argument("--disable-blink-features")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")

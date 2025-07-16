@@ -1,4 +1,4 @@
-from SinCity.colors import RED, RESET
+from SinCity.colors import RED, RESET, BLUE
 from modules.config import content_file_path
 import json, sys
 
@@ -36,6 +36,7 @@ def Content(full_attrs:str, target_company:str):
         elif 'tele' in full_attrs:content = phone
         
         elif 'company' in full_attrs:content = company
+        elif 'firma' in full_attrs:content = company
         
         elif 'project' in full_attrs:content = your_project
         
@@ -49,8 +50,11 @@ def Content(full_attrs:str, target_company:str):
         elif 'comment' in full_attrs:content = message
         elif 'nachricht' in full_attrs:content = message
         elif 'quest' in full_attrs:content = message
+        elif 'textarea' in full_attrs:content = message
         
         elif 'name' in full_attrs:content = user_name
+        elif 'naam' in full_attrs:content = user_name
+        elif 'nome' in full_attrs:content = user_name
         
         else:
             return False
@@ -66,6 +70,7 @@ def Content(full_attrs:str, target_company:str):
 def GenerateContent(full_attrs:str, company:str):
     content = Content(target_company=company, full_attrs=full_attrs) 
     if content != False:
+        print(f"{BLUE}{content}{RESET}")
         return content
     if content == False:
         return False

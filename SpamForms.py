@@ -4,9 +4,10 @@ from modules.miniTools import (
         ListBase,
         selectColumn,
         RecordingDoneDomain,
-        ReadDoneDomain
+        ReadDoneDomain,
+        RecordingSuccessSend
         )
-from modules.forms import SubmitForms
+from modules.form import SubmitForms
 import csv
 
 def processingBase(base:str, column:str):
@@ -22,8 +23,10 @@ def processingBase(base:str, column:str):
                 
                 print(f'{GREEN}[{counter_domain}] {domain}{RESET}')
                 """Основной функционал инструмента"""
-                SubmitForms(domain=domain, company=company)
-                
+                send_form = SubmitForms(domain=domain, company=company)
+                if send_form == True:
+                    RecordingSuccessSend(domain=domain, company=company)
+
                 """Записываем домен в док""" 
                 RecordingDoneDomain(domain=domain)
 

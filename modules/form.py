@@ -70,9 +70,14 @@ def SubmitForms(domain:str, company:str):
         current_url = driver.current_url
         if domain not in current_url:
             print(f'{RED}Перенаправление домена: {domain} -> {current_url}{RESET}')
+            RecordingNotSendedCompany(
+                domain=domain,
+                company=company,
+                reason="redirect_domain"
+                        )
             if driver != None:
                 driver.quit()
-            return
+            return False
         
         Scrolling(driver=driver)
         time.sleep(2)
@@ -82,13 +87,21 @@ def SubmitForms(domain:str, company:str):
             send = processingForms(
                     forms=all_forms, 
                     driver=driver, 
-                    company=company
+                    company=company,
+                    domain=domain
                     )
             if send == True:
-                return
+                return True
+            if send == False:
+                RecordingNotSendedCompany(
+                    domain=domain,
+                    company=company,
+                    reason="unknown_field"
+                        )
         if len(all_forms) == 0:
             print(f'{RED}Формы на {url} не обнаружены!{RESET}')
             other_pages = OtherPages(driver=driver, domain=domain)
+            count_send = False
             if len(other_pages) > 0:
                 number_page = 0
                 for page in other_pages:
@@ -102,23 +115,39 @@ def SubmitForms(domain:str, company:str):
                         send = processingForms(
                                 forms=other_forms, 
                                 driver=driver, 
-                                company=company
+                                company=company,
+                                domain=domain
                                 )
                         if send == True:
-                            return
+                            count_send = True
+                            return True
+            if count_send == False:
+                print(f'{RED}Контактных форм не обнаружено!{RESET}')
+                RecordingNotSendedCompany(
+                    domain=domain, 
+                    company=company,
+                    reason="not_defined"
+                    )
+
             if len(other_pages) == 0:
                 print(f"{RED}Страниц контактов не обнаружены!{RESET}")
+        
+        return False 
 
     except KeyboardInterrupt:
         print(f'{RED}\nExit...{RESET}')
+        sys.exit()
 
     except WebDriverException:
         print(f'{RED}Домен неактивен{RESET}')
+        return False
+    
+    except ReadTimeoutError:
+        print(f'{RED}Слишком долгое ожидание ответа!{RESET}')
 
     finally:
         if driver != None:
             driver.quit()
-        sys.exit()
 
 ###########################################################
 #                   Поиск форм                            #
@@ -134,7 +163,6 @@ def SearchForms(driver:str):
         data_form = [] 
         
         count_textarea = 0
-
         for field in form.find_all(list_type_field):
             text_field = str(field)
             
@@ -143,13 +171,26 @@ def SearchForms(driver:str):
             if 'input' in text_field and 'hidden' not in text_field and 'submit' \
                     not in text_field:
                 field_info['tag'] = 'input'
-
                 name = field.get('name')
                 type_field = field.get('type')
+                id_field = field.get('id') or '' 
 
+                field_info['id'] = id_field 
                 field_info['name'] = name
                 field_info['type'] = type_field
                 field_info['placeholder'] = None
+                field_info['class'] = None
+
+                classes = field.get('class') or None
+                text_classes = ''
+                if classes == None:
+                    text_classes = '' 
+                if classes != None:
+                    for class_ in classes:
+                        text_classes = f"{text_classes}.{class_}"
+                    if text_classes[0] == '.':text_classes = text_classes[1:]
+                
+                field_info['class'] = text_classes
 
             if 'textarea' in text_field:
                 field_info['tag'] = 'textarea'
@@ -157,12 +198,24 @@ def SearchForms(driver:str):
                 field_info['name'] = field.get('name') or 'text'
                 field_info['type'] = field.get('type') or 'text'
                 field_info['placeholder'] = None
+                field_info['id'] = '' 
+                
+                classes = field.get('class') or None
+                text_classes = ''
+                if classes == None:
+                    text_classes = '' 
+                if classes != None:
+                    for class_ in classes:
+                        text_classes = f"{text_classes}.{class_}"
+                    if text_classes[0] == '.':text_classes = text_classes[1:]
+                
+                field_info['class'] = text_classes
 
             try:
                 placeholder = field.attrs['placeholder']
                 field_info['placeholder'] = placeholder
             except KeyError:
-                pass 
+                pass
 
             if len(field_info) > 0:data_form.append(field_info)
         
@@ -180,15 +233,18 @@ def SearchForms(driver:str):
 ###########################################################
 #               Обработка формы                           #
 ###########################################################
-def processingForms(forms:list[list[dict]], driver:str, company:str):
+def processingForms(forms:list[list[dict]], driver:str, company:str, domain:str):
     """Получаем список форм с полями для обработки"""
     for form in forms:
+        if len(form) < 3:
+            continue
         success = ConfirmForm(driver=driver, form=form, company=company)
         if success == True:
             print(f"{GREEN}Форма успешно отправлена!{RESET}")
             return True
         if success == False:
             print(f"{RED}Форма не отправлена!{RESET}")
+            RecordingNotSendedCompany(domain=domain, company=company, reason="unknown_field")
             return False
 
 ###########################################################
@@ -196,8 +252,22 @@ def processingForms(forms:list[list[dict]], driver:str, company:str):
 ###########################################################
 def ConfirmForm(driver:str, form:[], company:str):
     all_forms = driver.find_elements(By.TAG_NAME, 'form')
-
+    
     for target_form in all_forms:
+        """Чисто для отладки вывести количество форм на странице"""
+        #print(f'Всего форм: {len(all_forms)}')
+
+        input_fields = target_form.find_elements(By.TAG_NAME, 'input')
+        all_fields_input = len(input_fields)
+        """Показываем инпуты(их количество)"""
+        #print(f'Всего {all_fields_input} инпутов')
+        for input_field in input_fields:
+            if input_field.is_displayed() == False:
+                all_fields_input-=1
+        """Показываем фактический остаток полей, которые не скрыты"""
+        #print(f'Всего не скрытых полей {all_fields_input}')
+        if all_fields_input < 2:
+            continue
 
         matched_field = 0
         max_field = len(form)
@@ -206,25 +276,82 @@ def ConfirmForm(driver:str, form:[], company:str):
             name = field['name']
             type_field = field['type']
             placeholder = field['placeholder']
+            class_name = field['class']
+            id_field = field['id']
 
-            full_attrs = f"{tag} {name} {type_field} {placeholder}"
-            print(full_attrs)
+            full_attrs = (
+                    f"{tag} {name} {type_field} "
+                    f"{placeholder} {class_name}"
+                    )
+            if 'newsletter' in full_attrs:
+                continue
+            if 'recaptcha' in full_attrs:
+                RecordingNotSendedCompany(
+                    domain=domain,
+                    company=company,
+                    reason="recaptcha"
+                    )
+                return False
+            if 'email' in type_field:
+                full_attrs = 'email'
+            if 'date' in type_field:
+                all_fields_input-=1
+                continue
+            if 'file' in type_field:
+                all_fields_input-=1
+                continue
             content = GenerateContent(full_attrs=full_attrs, company=company)
-             
-            if content != False: 
+
+            print(full_attrs)
+            content_list = []
+            list_class = []
+            
+            if content != False and content not in content_list:
+                content_list.append(content)
+                time.sleep(1)
                 try:
-                    if tag == 'textarea':
-                        try:
-                            for letter in target_form.find_elements(
-                                    By.CSS_SELECTOR, 'textarea'
-                                    ):
-                                letter.send_keys(content)
-                                matched_field+=1
-                        except:
-                            pass
+                    if 'textarea' in full_attrs:
+                        print(f'Обнаружено поле для ввода письма:')
+                        content = GenerateContent(full_attrs="textarea", company=company)
+                        print(content)
+                        letter = target_form.find_element(By.TAG_NAME, 'textarea')
+                        letter.send_keys(content)
+                        matched_field+=1
                         continue
+
+                    if len(id_field) > 1:
+                        print(id_field)
+                        element = target_form.find_element(By.ID, id_field)
+                        element.send_keys(content)
+                        matched_field+=1
+                        continue
+
+
+                    if 'checkbox' in full_attrs:
+                        try:
+                            print(f'Обнаружен чек-бокс')
+                            for checkbox in target_form.find_elements(
+                                    By.CSS_SELECTOR, 'checkbox'
+                                    ):
+                                checkbox.click()
+                                matched_field+=1
+                                continue
+                        except:
+                            print(f'{RED}Не удалось прожать чек-бокс!{RESET}')
+                            return False
+                    
+                    elif placeholder != None: 
+                        print(f'Ввод по placeholder: {placeholder}')
+                        target_placeholder = target_form.find_element(
+                                By.CSS_SELECTOR, f'[placeholder="{placeholder}"]'
+                                )
+                        target_placeholder.send_keys(content)
+                        matched_field+=1
+                        continue
+
                             
                     elif name != None:
+                        print(f'Ввод {content} по name')
                         target_name = target_form.find_element(
                                 By.NAME, name
                                 )
@@ -232,31 +359,53 @@ def ConfirmForm(driver:str, form:[], company:str):
                         matched_field+=1
                         continue
 
-                    elif placeholder != None: 
-                        target_placeholder = target_form.find_element(
-                                By.CSS_SELECTOR, f'[placeholder="{placeholder}"]'
-                                )
-                        target_placeholder.send_keys(content)
-                        matched_field+=1
-                        continue
-                    else:
-                        continue
                     
+                    elif len(class_name) >= 1:
+                        if class_name not in list_class:
+                            list_class.append(class_name)
+                            print(class_name)
+                            class_element = target_form.find_element(By.CLASS_NAME, class_name)
+                            class_element.send_keys(content)
+                            matched_field+=1
+                            continue
 
+
+                    else:
+                        print(
+                                f"{RED}Поле не получилось определить стандартным методом\n"
+                                f"Пытаемся найти поле силами селениума!{RESET}"
+                                )
+                        for element in target_form.find_elements(By.TAG_NAME, tag):
+                            print('тут исключение')
+                            id_element = element.get_attribute('id')
+                            element = element.find_element(By.ID, id_element)
+                            element.send_keys(content)
+                            matched_field+=1
+
+                        if 'textarea' in full_attrs.lower():
+                            textarea = target_form.find_element(By.TAG_NAME, 'textarea')
+                            textarea.send_keys(content)
+                            matched_field+=1
                 except Exception as err:
                     print(err)
                 
-        if max_field == matched_field:
+        """
+        Тут пока что есть трудности с точным подсчетом полей
+        По этой причине будем считать, что все ок, если форма отправилась
+        """
+        #if max_field == matched_field:
+        try:
             submit = driver.find_element(By.CSS_SELECTOR, '[type="submit"]')
-            submit.click()
+            """Для текстовых запусков комментируем клик по кнопке"""
+            #submit.click()
             time.sleep(2)
             return True
-            
-            
-    return False
+        except:
+            pass
+        if max_field != matched_field:
+            continue
 
-        
-        
+    return False
 
 ###########################################################
 #               Для отладочных запусков                   #
